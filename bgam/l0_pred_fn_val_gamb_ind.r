@@ -1,13 +1,21 @@
-pred_val_gamb<-function(tune_run,val_run,val_run2){
+pred_val_gamb <- function(tune_run, val_run, val_run2, demo=FALSE) {
 
 #TUNING
-print(paste("tune_run",tune_run))
-tune_run<-as.integer(tune_run)
-print(paste("val_run",val_run))
-val_run<-as.integer(val_run)
-print(paste("val_run2",val_run2))
-val_run2<-as.integer(val_run2)
+print(paste("tune_run", tune_run))
+tune_run <- as.integer(tune_run)
+print(paste("val_run", val_run))
+val_run <- as.integer(val_run)
+print(paste("val_run2", val_run2))
+val_run2 <- as.integer(val_run2)
 
+# Set mstop based on demo mode
+if (demo) {
+  mstop_param <- 50
+  print("Running in DEMO mode (mstop=50)")
+} else {
+  mstop_param <- 80000
+  print("Running in PRODUCTION mode (mstop=80000)")
+}
 
 #GAMB
 library(mboost)
@@ -27,9 +35,8 @@ print(paste("theta2 maximum", theta2$maximum,sep=" "))
 data_all[,"pcent_mortality"]<-IHS(data_all[,"pcent_mortality"],theta2$maximum)
 
 #Specify hyperparameters
-gambGrid <- expand.grid(mstop=80000)
+gambGrid <- expand.grid(mstop=mstop_param)
 gambTuneGrid<-gambGrid[tune_run,]
-
 gambPredJ<-list()
 
 #Format for BGAM
