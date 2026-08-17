@@ -20,12 +20,36 @@ pred_val_rf <- function(tune_run, tune_run2, val_run, demo=FALSE) {
 library(caret)
 library(data.table)
 source("load_gen.r")
-load("inputs_data_all_wa_tree5d.r")
-data_all<-inputs$data_all_wa
+
+# Load data from consolidated data/raw folder
+data_all <- read.csv("../data/raw/inputs_data_all_wa.csv", stringsAsFactors=FALSE)
 load("stk_val_inds5.r")
 load("non_spatial_val_sets6.r")
 
-covariate.names<-inputs$covariate.names.all.wa
+# Load covariate names from CSV
+covariate_df <- read.csv("../data/raw/covariate_names.csv", stringsAsFactors=FALSE)
+covariate.names <- covariate_df$covariate_name
+
+# Load and convert factor covariates before subsetting
+factor_cov_file <- "../data/raw/factor_covariate_names.txt"
+if (file.exists(factor_cov_file)) {
+  factor_cov_nms <- readLines(factor_cov_file)
+  for (cov in factor_cov_nms) {
+    if (cov %in% names(data_all)) {
+      data_all[[cov]] <- factor(data_all[[cov]])
+      cat("Converted", cov, "to factor with levels:", 
+          paste(levels(data_all[[cov]]), collapse=", "), "\n")
+    }
+  }
+} else {
+  cat("Warning: factor_covariate_names.txt not found\n")
+}
+
+# Create dummy variables for all factor levels
+# Ensuring train/test sets have consistent columns
+data_all <- model.matrix(~ . - 1, data = data_all)
+data_all <- as.data.frame(data_all)
+
 #Select indices for outer test set
 stk_val_inds_i<-c(stk_val_inds[[val_run]][[1]],stk_val_inds[[val_run]][[2]],stk_val_inds[[val_run]][[3]],stk_val_inds[[val_run]][[4]])
 
@@ -35,7 +59,7 @@ theta2<-optimise(IHS.loglik, lower=0.001, upper=50, x=data_all[,"pcent_mortality
 print(paste("theta2 maximum", theta2$maximum,sep=" "))
 data_all[,"pcent_mortality"]<-IHS(data_all[,"pcent_mortality"],theta2$maximum)
 
-model_lhs<-paste(c(inputs$covariate.names.all.wa),collapse='+')
+model_lhs<-paste(c(covariate.names),collapse='+')
 
 #Specify hyperparameters
 rfGrid <- expand.grid(mtry=150)

@@ -19,12 +19,32 @@ if (demo) {
 
 #GAMB
 library(mboost)
-load("inputs_data_all_wa_fact5d.r")
-data_all<-inputs$data_all_wa
-covariate.names<-inputs$covariate.names.all.wa
+# Load data from consolidated data/raw folder
+data_all <- read.csv("../data/raw/inputs_data_all_wa.csv", stringsAsFactors=FALSE)
+
+# Get actual column names (excluding response and metadata columns)
+all_cols <- names(data_all)
+exclude_cols <- c("pcent_mortality", "no_dead", "no_tested", "start_month", 
+                  "end_year", "end_month", "latitude", "longitude")
+covariate.names <- setdiff(all_cols, exclude_cols)
+
+# Save original covariate names (before formatting)
+original_covariate_names <- covariate.names
+
+# Load factor covariate names (for BGAM base learner specification)
+factor_cov_nms <- readLines("../data/raw/factor_covariate_names.txt")
+
+# Convert factor covariates to R factor class
+for (cov in factor_cov_nms) {
+  if (cov %in% names(data_all)) {
+    data_all[[cov]] <- as.factor(data_all[[cov]])
+  }
+}
+
 source("load_gen.r")
 load("stk_val_inds5.r")
 load("non_spatial_val_sets6.r")
+
 #Select indices for outer test set
 stk_val_inds_i<-c(stk_val_inds[[val_run]][[1]],stk_val_inds[[val_run]][[2]],stk_val_inds[[val_run]][[3]],stk_val_inds[[val_run]][[4]])
 
@@ -41,7 +61,7 @@ gambPredJ<-list()
 
 #Format for BGAM
 
-covariate.namesa<-inputs$factor_cov_nms
+covariate.namesa <- factor_cov_nms
 cts_cov_inds<-which(!is.element(covariate.names,covariate.namesa))
 
 	#bols model for factor covariates
@@ -52,7 +72,7 @@ covariate.namesb<-covariate.names[cts_cov_inds]
 covariate.namesb<-sapply(covariate.namesb,function(x) paste("bbs(",x,",center=TRUE,df=1)+bols(",x,",intercept=FALSE)",sep=""))
 covariate.namesb<-c("bols(int,intercept=FALSE)",covariate.namesb)
 
-	#add an intercept
+	# add an intercept
 data_all$int<-rep(1,nrow(data_all))
 
 covariate.names<-c(covariate.namesa,covariate.namesb)
@@ -64,9 +84,9 @@ rmse<-NULL
 #Select indices for the validation set excluding indices in the test set
 test_inds_a<-val_ind[[val_run2]]
 test_inds<-test_inds_a[which(!is.element(test_inds_a,stk_val_inds_i))]
-testJ<-data_all[test_inds,c("pcent_mortality",inputs$covariate.names.all.wa,"int")]
+testJ<-data_all[test_inds,c("pcent_mortality",original_covariate_names,"int")]
 train_inds<-c(1:nrow(data_all))[-test_inds]
-trainJ<-data_all[-test_inds,c("pcent_mortality",inputs$covariate.names.all.wa,"int")]
+trainJ<-data_all[-test_inds,c("pcent_mortality",original_covariate_names,"int")]
 test_inds_all<-test_inds
 
 data_all_i<-rbind(trainJ,testJ)
