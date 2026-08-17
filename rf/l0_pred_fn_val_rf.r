@@ -1,11 +1,20 @@
-pred_val_rf<-function(tune_run,tune_run2,val_run){
-
-print(paste("tune_run",tune_run))
-print(paste("tune_run2",tune_run2))
-tune_run<-as.integer(tune_run)
-tune_run2<-as.integer(tune_run2)
-print(paste("val_run",val_run))
-val_run<-as.integer(val_run)
+pred_val_rf <- function(tune_run, tune_run2, val_run, demo=FALSE) {
+  
+  print(paste("tune_run", tune_run))
+  print(paste("tune_run2", tune_run2))
+  tune_run <- as.integer(tune_run)
+  tune_run2 <- as.integer(tune_run2)
+  print(paste("val_run", val_run))
+  val_run <- as.integer(val_run)
+  
+  # Set ntree based on demo mode
+  if (demo) {
+    ntree_param <- 5
+    print("Running in DEMO mode (ntree=5)")
+  } else {
+    ntree_param <- 1001
+    print("Running in PRODUCTION mode (ntree=1001)")
+  }
 
 #RF
 library(caret)
@@ -52,8 +61,11 @@ test_inds_all<-test_inds
 #Format for RF
 form<-as.formula(paste("pcent_mortality",model_lhs,sep="~"))
 
-#Train the model
-rfFitJ<-train(form, data = trainJ, method = "rf",verbose = TRUE,tuneGrid=rfTuneGrid,ntree=1001,replace=TRUE,metric="RMSE",col_sample_rate_per_tree=paramsTuneGrid$col_sample_rate_per_tree,nodesize=paramsTuneGrid$nodesize)
+# Train the model
+rfFitJ <- train(form, data = trainJ, method = "rf", verbose = TRUE,
+                tuneGrid=rfTuneGrid, ntree=ntree_param, replace=TRUE,
+                metric="RMSE", col_sample_rate_per_tree=paramsTuneGrid$col_sample_rate_per_tree,
+                nodesize=paramsTuneGrid$nodesize)
 
 #Get out of sample predictions
 rfPredJ[[1]]<-predict(rfFitJ,newdata=testJ)
@@ -68,7 +80,10 @@ trainJ<-data_all[train_inds,]
 
 test_inds_all<-c(test_inds_all,test_inds)
 
-rfFitJ<-train(form, data = trainJ, method = "rf", verbose = TRUE,tuneGrid=rfTuneGrid,ntree=1001,replace=TRUE,metric="RMSE",col_sample_rate_per_tree=paramsTuneGrid$col_sample_rate_per_tree,nodesize=paramsTuneGrid$nodesize)
+rfFitJ <- train(form, data = trainJ, method = "rf", verbose = TRUE,
+                tuneGrid=rfTuneGrid, ntree=ntree_param, replace=TRUE,
+                metric="RMSE", col_sample_rate_per_tree=paramsTuneGrid$col_sample_rate_per_tree,
+                nodesize=paramsTuneGrid$nodesize)
 
 rfPredJ[[i]]<-predict(rfFitJ,newdata=testJ)
 
